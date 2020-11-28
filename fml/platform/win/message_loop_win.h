@@ -1,13 +1,13 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef FLUTTER_FML_PLATFORM_WIN_MESSAGE_LOOP_WIN_H_
 #define FLUTTER_FML_PLATFORM_WIN_MESSAGE_LOOP_WIN_H_
 
-#include <atomic>
-
 #include <windows.h>
+
+#include <atomic>
 
 #include "flutter/fml/macros.h"
 #include "flutter/fml/message_loop_impl.h"

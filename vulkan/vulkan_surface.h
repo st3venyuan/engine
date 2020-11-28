@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,8 +6,8 @@
 #define FLUTTER_VULKAN_VULKAN_SURFACE_H_
 
 #include "flutter/fml/macros.h"
-#include "flutter/vulkan/vulkan_handle.h"
 #include "third_party/skia/include/core/SkSize.h"
+#include "vulkan_handle.h"
 
 namespace vulkan {
 

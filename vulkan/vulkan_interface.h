@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,8 +10,6 @@
 #include "flutter/fml/build_config.h"
 #include "flutter/fml/logging.h"
 
-#define VULKAN_LINK_STATICALLY OS_FUCHSIA
-
 #if OS_ANDROID
 #ifndef VK_USE_PLATFORM_ANDROID_KHR
 #define VK_USE_PLATFORM_ANDROID_KHR 1
@@ -22,6 +20,9 @@
 #ifndef VK_USE_PLATFORM_MAGMA_KHR
 #define VK_USE_PLATFORM_MAGMA_KHR 1
 #endif  // VK_USE_PLATFORM_MAGMA_KHR
+#ifndef VK_USE_PLATFORM_FUCHSIA
+#define VK_USE_PLATFORM_FUCHSIA 1
+#endif  // VK_USE_PLATFORM_FUCHSIA
 #endif  // OS_FUCHSIA
 
 #if !VULKAN_LINK_STATICALLY

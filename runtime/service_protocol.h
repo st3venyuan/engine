@@ -1,4 +1,4 @@
-// Copyright 2017 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,26 +6,29 @@
 #define FLUTTER_RUNTIME_SERVICE_PROTOCOL_H_
 
 #include <map>
-#include <mutex>
 #include <set>
 #include <string>
+#include <string_view>
 
 #include "flutter/fml/compiler_specific.h"
 #include "flutter/fml/macros.h"
-#include "flutter/fml/string_view.h"
-#include "flutter/fml/synchronization/thread_annotations.h"
+#include "flutter/fml/synchronization/atomic_object.h"
+#include "flutter/fml/synchronization/shared_mutex.h"
 #include "flutter/fml/task_runner.h"
-#include "third_party/rapidjson/rapidjson/document.h"
+#include "rapidjson/document.h"
 
-namespace blink {
+namespace flutter {
 
 class ServiceProtocol {
  public:
-  static const fml::StringView kScreenshotExtensionName;
-  static const fml::StringView kScreenshotSkpExtensionName;
-  static const fml::StringView kRunInViewExtensionName;
-  static const fml::StringView kFlushUIThreadTasksExtensionName;
-  static const fml::StringView kSetAssetBundlePathExtensionName;
+  static const std::string_view kScreenshotExtensionName;
+  static const std::string_view kScreenshotSkpExtensionName;
+  static const std::string_view kRunInViewExtensionName;
+  static const std::string_view kFlushUIThreadTasksExtensionName;
+  static const std::string_view kSetAssetBundlePathExtensionName;
+  static const std::string_view kGetDisplayRefreshRateExtensionName;
+  static const std::string_view kGetSkSLsExtensionName;
+  static const std::string_view kEstimateRasterCacheMemoryExtensionName;
 
   class Handler {
    public:
@@ -44,17 +47,17 @@ class ServiceProtocol {
                  rapidjson::MemoryPoolAllocator<>& allocator) const;
     };
 
-    using ServiceProtocolMap = std::map<fml::StringView, fml::StringView>;
+    using ServiceProtocolMap = std::map<std::string_view, std::string_view>;
 
     virtual fml::RefPtr<fml::TaskRunner> GetServiceProtocolHandlerTaskRunner(
-        fml::StringView method) const = 0;
+        std::string_view method) const = 0;
 
     virtual Description GetServiceProtocolDescription() const = 0;
 
     virtual bool HandleServiceProtocolMessage(
-        fml::StringView method,  // one if the extension names specified above.
+        std::string_view method,  // one if the extension names specified above.
         const ServiceProtocolMap& params,
-        rapidjson::Document& response) = 0;
+        rapidjson::Document* response) = 0;
   };
 
   ServiceProtocol();
@@ -63,38 +66,38 @@ class ServiceProtocol {
 
   void ToggleHooks(bool set);
 
-  void AddHandler(Handler* handler);
+  void AddHandler(Handler* handler, Handler::Description description);
 
   void RemoveHandler(Handler* handler);
 
+  void SetHandlerDescription(Handler* handler,
+                             Handler::Description description);
+
  private:
-  const std::set<fml::StringView> endpoints_;
-  mutable std::mutex handlers_mutex_;
-  std::set<Handler*> handlers_;
+  const std::set<std::string_view> endpoints_;
+  std::unique_ptr<fml::SharedMutex> handlers_mutex_;
+  std::map<Handler*, fml::AtomicObject<Handler::Description>> handlers_;
 
-  FML_WARN_UNUSED_RESULT
-  static bool HandleMessage(const char* method,
-                            const char** param_keys,
-                            const char** param_values,
-                            intptr_t num_params,
-                            void* user_data,
-                            const char** json_object);
-  FML_WARN_UNUSED_RESULT
-  static bool HandleMessage(fml::StringView method,
-                            const Handler::ServiceProtocolMap& params,
-                            ServiceProtocol* service_protocol,
-                            rapidjson::Document& response);
-  FML_WARN_UNUSED_RESULT
-  bool HandleMessage(fml::StringView method,
-                     const Handler::ServiceProtocolMap& params,
-                     rapidjson::Document& response) const;
+  [[nodiscard]] static bool HandleMessage(const char* method,
+                                          const char** param_keys,
+                                          const char** param_values,
+                                          intptr_t num_params,
+                                          void* user_data,
+                                          const char** json_object);
+  [[nodiscard]] static bool HandleMessage(
+      std::string_view method,
+      const Handler::ServiceProtocolMap& params,
+      ServiceProtocol* service_protocol,
+      rapidjson::Document* response);
+  [[nodiscard]] bool HandleMessage(std::string_view method,
+                                   const Handler::ServiceProtocolMap& params,
+                                   rapidjson::Document* response) const;
 
-  FML_WARN_UNUSED_RESULT
-  bool HandleListViewsMethod(rapidjson::Document& response) const;
+  [[nodiscard]] bool HandleListViewsMethod(rapidjson::Document* response) const;
 
   FML_DISALLOW_COPY_AND_ASSIGN(ServiceProtocol);
 };
 
-}  // namespace blink
+}  // namespace flutter
 
 #endif  // FLUTTER_RUNTIME_SERVICE_PROTOCOL_H_

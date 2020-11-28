@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,9 +6,9 @@
 #define FLUTTER_VULKAN_VULKAN_DEBUG_REPORT_H_
 
 #include "flutter/fml/macros.h"
-#include "flutter/vulkan/vulkan_handle.h"
-#include "flutter/vulkan/vulkan_interface.h"
-#include "flutter/vulkan/vulkan_proc_table.h"
+#include "vulkan_handle.h"
+#include "vulkan_interface.h"
+#include "vulkan_proc_table.h"
 
 namespace vulkan {
 

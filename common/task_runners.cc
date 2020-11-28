@@ -1,4 +1,4 @@
-// Copyright 2017 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,18 +6,20 @@
 
 #include <utility>
 
-namespace blink {
+namespace flutter {
 
 TaskRunners::TaskRunners(std::string label,
                          fml::RefPtr<fml::TaskRunner> platform,
-                         fml::RefPtr<fml::TaskRunner> gpu,
+                         fml::RefPtr<fml::TaskRunner> raster,
                          fml::RefPtr<fml::TaskRunner> ui,
                          fml::RefPtr<fml::TaskRunner> io)
     : label_(std::move(label)),
       platform_(std::move(platform)),
-      gpu_(std::move(gpu)),
+      raster_(std::move(raster)),
       ui_(std::move(ui)),
       io_(std::move(io)) {}
+
+TaskRunners::TaskRunners(const TaskRunners& other) = default;
 
 TaskRunners::~TaskRunners() = default;
 
@@ -37,12 +39,12 @@ fml::RefPtr<fml::TaskRunner> TaskRunners::GetIOTaskRunner() const {
   return io_;
 }
 
-fml::RefPtr<fml::TaskRunner> TaskRunners::GetGPUTaskRunner() const {
-  return gpu_;
+fml::RefPtr<fml::TaskRunner> TaskRunners::GetRasterTaskRunner() const {
+  return raster_;
 }
 
 bool TaskRunners::IsValid() const {
-  return platform_ && gpu_ && ui_ && io_;
+  return platform_ && raster_ && ui_ && io_;
 }
 
-}  // namespace blink
+}  // namespace flutter

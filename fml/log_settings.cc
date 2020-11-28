@@ -1,13 +1,13 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "flutter/fml/log_settings.h"
 
 #include <fcntl.h>
-#include <string.h>
 
 #include <algorithm>
+#include <cstring>
 #include <iostream>
 
 #include "flutter/fml/logging.h"
@@ -32,6 +32,15 @@ LogSettings GetLogSettings() {
 
 int GetMinLogLevel() {
   return std::min(state::g_log_settings.min_log_level, LOG_FATAL);
+}
+
+ScopedSetLogSettings::ScopedSetLogSettings(const LogSettings& settings) {
+  old_settings_ = GetLogSettings();
+  SetLogSettings(settings);
+}
+
+ScopedSetLogSettings::~ScopedSetLogSettings() {
+  SetLogSettings(old_settings_);
 }
 
 }  // namespace fml

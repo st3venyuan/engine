@@ -1,4 +1,4 @@
-// Copyright 2018 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,8 +13,8 @@ NativeLibrary::NativeLibrary(const char* path) {
   ::dlerror();
   handle_ = ::dlopen(path, RTLD_NOW);
   if (handle_ == nullptr) {
-    FML_LOG(ERROR) << "Could not open library '" << path << "' due to error '"
-                   << ::dlerror() << "'.";
+    FML_DLOG(ERROR) << "Could not open library '" << path << "' due to error '"
+                    << ::dlerror() << "'.";
   }
 }
 
@@ -58,7 +58,7 @@ fml::RefPtr<NativeLibrary> NativeLibrary::CreateForCurrentProcess() {
 }
 
 const uint8_t* NativeLibrary::ResolveSymbol(const char* symbol) {
-  auto resolved_symbol = static_cast<const uint8_t*>(::dlsym(handle_, symbol));
+  auto* resolved_symbol = static_cast<const uint8_t*>(::dlsym(handle_, symbol));
   if (resolved_symbol == nullptr) {
     FML_DLOG(INFO) << "Could not resolve symbol in library: " << symbol;
   }

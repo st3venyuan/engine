@@ -1,18 +1,17 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef FLUTTER_LIB_UI_WINDOW_POINTER_DATA_PACKET_H_
 #define FLUTTER_LIB_UI_WINDOW_POINTER_DATA_PACKET_H_
 
-#include <string.h>
-
+#include <cstring>
 #include <vector>
 
 #include "flutter/fml/macros.h"
 #include "flutter/lib/ui/window/pointer_data.h"
 
-namespace blink {
+namespace flutter {
 
 class PointerDataPacket {
  public:
@@ -29,6 +28,6 @@ class PointerDataPacket {
   FML_DISALLOW_COPY_AND_ASSIGN(PointerDataPacket);
 };
 
-}  // namespace blink
+}  // namespace flutter
 
 #endif  // FLUTTER_LIB_UI_WINDOW_POINTER_DATA_PACKET_H_

@@ -1,4 +1,4 @@
-// Copyright 2018 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,13 +9,10 @@
 #include "flutter/fml/unique_object.h"
 
 #if OS_WIN
-
 #include <windows.h>
-
 #else  // OS_WIN
-
+#include <dirent.h>
 #include <unistd.h>
-
 #endif  // OS_WIN
 
 namespace fml {
@@ -23,7 +20,7 @@ namespace internal {
 
 #if OS_WIN
 
-namespace win {
+namespace os_win {
 
 struct UniqueFDTraits {
   static HANDLE InvalidValue() { return INVALID_HANDLE_VALUE; }
@@ -31,11 +28,11 @@ struct UniqueFDTraits {
   static void Free(HANDLE fd);
 };
 
-}  // namespace win
+}  // namespace os_win
 
 #else  // OS_WIN
 
-namespace unix {
+namespace os_unix {
 
 struct UniqueFDTraits {
   static int InvalidValue() { return -1; }
@@ -43,7 +40,13 @@ struct UniqueFDTraits {
   static void Free(int fd);
 };
 
-}  // namespace unix
+struct UniqueDirTraits {
+  static DIR* InvalidValue() { return nullptr; }
+  static bool IsValid(DIR* value) { return value != nullptr; }
+  static void Free(DIR* dir);
+};
+
+}  // namespace os_unix
 
 #endif  // OS_WIN
 
@@ -51,11 +54,12 @@ struct UniqueFDTraits {
 
 #if OS_WIN
 
-using UniqueFD = UniqueObject<HANDLE, internal::win::UniqueFDTraits>;
+using UniqueFD = UniqueObject<HANDLE, internal::os_win::UniqueFDTraits>;
 
 #else  // OS_WIN
 
-using UniqueFD = UniqueObject<int, internal::unix::UniqueFDTraits>;
+using UniqueFD = UniqueObject<int, internal::os_unix::UniqueFDTraits>;
+using UniqueDir = UniqueObject<DIR*, internal::os_unix::UniqueDirTraits>;
 
 #endif  // OS_WIN
 

@@ -1,4 +1,4 @@
-// Copyright 2018 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -47,7 +47,7 @@ class MessageSerializable {
 
   virtual bool Deserialize(Message& message) = 0;
 
-  virtual size_t GetSerializableTag() const { return 0; };
+  virtual size_t GetSerializableTag() const;
 };
 
 // The traits passed to the encode/decode calls that accept traits should be
@@ -87,15 +87,15 @@ class Message {
 
   template <typename T,
             typename = std::enable_if_t<std::is_trivially_copyable<T>::value>>
-  FML_WARN_UNUSED_RESULT bool Encode(const T& value) {
-    if (auto buffer = PrepareEncode(sizeof(T))) {
+  [[nodiscard]] bool Encode(const T& value) {
+    if (auto* buffer = PrepareEncode(sizeof(T))) {
       ::memcpy(buffer, &value, sizeof(T));
       return true;
     }
     return false;
   }
 
-  FML_WARN_UNUSED_RESULT bool Encode(const MessageSerializable& value) {
+  [[nodiscard]] bool Encode(const MessageSerializable& value) {
     return value.Serialize(*this);
   }
 
@@ -103,7 +103,7 @@ class Message {
             typename T,
             typename = std::enable_if_t<
                 std::is_base_of<MessageSerializable, T>::value>>
-  FML_WARN_UNUSED_RESULT bool Encode(const std::unique_ptr<T>& value) {
+  [[nodiscard]] bool Encode(const std::unique_ptr<T>& value) {
     // Encode if null.
     if (!Encode(static_cast<bool>(value))) {
       return false;
@@ -130,15 +130,15 @@ class Message {
 
   template <typename T,
             typename = std::enable_if_t<std::is_trivially_copyable<T>::value>>
-  FML_WARN_UNUSED_RESULT bool Decode(T& value) {
-    if (auto buffer = PrepareDecode(sizeof(T))) {
+  [[nodiscard]] bool Decode(T& value) {
+    if (auto* buffer = PrepareDecode(sizeof(T))) {
       ::memcpy(&value, buffer, sizeof(T));
       return true;
     }
     return false;
   }
 
-  FML_WARN_UNUSED_RESULT bool Decode(MessageSerializable& value) {
+  [[nodiscard]] bool Decode(MessageSerializable& value) {
     return value.Deserialize(*this);
   }
 
@@ -146,7 +146,7 @@ class Message {
             typename T,
             typename = std::enable_if_t<
                 std::is_base_of<MessageSerializable, T>::value>>
-  FML_WARN_UNUSED_RESULT bool Decode(std::unique_ptr<T>& value) {
+  [[nodiscard]] bool Decode(std::unique_ptr<T>& value) {
     // Decode if null.
     bool is_null = false;
     if (!Decode(is_null)) {
@@ -184,17 +184,13 @@ class Message {
   size_t data_length_ = 0;
   size_t size_read_ = 0;
 
-  FML_WARN_UNUSED_RESULT
-  bool Reserve(size_t size);
+  [[nodiscard]] bool Reserve(size_t size);
 
-  FML_WARN_UNUSED_RESULT
-  bool Resize(size_t size);
+  [[nodiscard]] bool Resize(size_t size);
 
-  FML_WARN_UNUSED_RESULT
-  uint8_t* PrepareEncode(size_t size);
+  [[nodiscard]] uint8_t* PrepareEncode(size_t size);
 
-  FML_WARN_UNUSED_RESULT
-  uint8_t* PrepareDecode(size_t size);
+  [[nodiscard]] uint8_t* PrepareDecode(size_t size);
 
   FML_DISALLOW_COPY_AND_ASSIGN(Message);
 };

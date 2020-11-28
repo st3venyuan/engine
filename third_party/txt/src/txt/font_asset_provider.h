@@ -17,6 +17,8 @@
 #ifndef TXT_FONT_ASSET_PROVIDER_H_
 #define TXT_FONT_ASSET_PROVIDER_H_
 
+#include <string>
+
 #include "third_party/skia/include/core/SkFontMgr.h"
 
 namespace txt {
@@ -28,6 +30,9 @@ class FontAssetProvider {
   virtual size_t GetFamilyCount() const = 0;
   virtual std::string GetFamilyName(int index) const = 0;
   virtual SkFontStyleSet* MatchFamily(const std::string& family_name) = 0;
+
+ protected:
+  static std::string CanonicalFamilyName(std::string family_name);
 };
 
 }  // namespace txt

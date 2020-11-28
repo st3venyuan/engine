@@ -1,4 +1,4 @@
-// Copyright 2018 The Flutter Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,11 +10,9 @@
 #include "flutter/fml/memory/ref_counted.h"
 #include "flutter/fml/memory/ref_ptr.h"
 
-#if OS_WIN
-
+#if defined(OS_WIN)
 #include <windows.h>
-
-#endif  // OS_WIN
+#endif  // defined(OS_WIN)
 
 namespace fml {
 class NativeLibrary : public fml::RefCountedThreadSafe<NativeLibrary> {

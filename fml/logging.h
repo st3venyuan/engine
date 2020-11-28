@@ -1,4 +1,4 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -42,6 +42,8 @@ int GetVlogVerbosity();
 // Returns true if |severity| is at or above the current minimum log level.
 // LOG_FATAL and above is always true.
 bool ShouldCreateLogMessage(LogSeverity severity);
+
+[[noreturn]] void KillProcess();
 
 }  // namespace fml
 
@@ -87,9 +89,10 @@ bool ShouldCreateLogMessage(LogSeverity severity);
 #define FML_DCHECK(condition) FML_EAT_STREAM_PARAMETERS(condition)
 #endif
 
-#define FML_NOTREACHED() FML_DCHECK(false)
-
-#define FML_NOTIMPLEMENTED() \
-  FML_LOG(ERROR) << "Not implemented in: " << __PRETTY_FUNCTION__
+#define FML_UNREACHABLE()                          \
+  {                                                \
+    FML_LOG(ERROR) << "Reached unreachable code."; \
+    ::fml::KillProcess();                          \
+  }
 
 #endif  // FLUTTER_FML_LOGGING_H_

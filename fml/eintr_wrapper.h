@@ -1,13 +1,13 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef FLUTTER_FML_EINTR_WRAPPER_H_
 #define FLUTTER_FML_EINTR_WRAPPER_H_
 
-#include "flutter/fml/build_config.h"
-
 #include <errno.h>
+
+#include "flutter/fml/build_config.h"
 
 #if defined(OS_WIN)
 

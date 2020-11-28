@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,19 +7,33 @@
 #include <memory>
 #include "flutter/fml/logging.h"
 
-namespace shell {
+namespace flutter {
 
-GPUSurfaceSoftware::GPUSurfaceSoftware(GPUSurfaceSoftwareDelegate* delegate)
-    : delegate_(delegate), weak_factory_(this) {}
+GPUSurfaceSoftware::GPUSurfaceSoftware(GPUSurfaceSoftwareDelegate* delegate,
+                                       bool render_to_surface)
+    : delegate_(delegate),
+      render_to_surface_(render_to_surface),
+      weak_factory_(this) {}
 
 GPUSurfaceSoftware::~GPUSurfaceSoftware() = default;
 
+// |Surface|
 bool GPUSurfaceSoftware::IsValid() {
   return delegate_ != nullptr;
 }
 
+// |Surface|
 std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
     const SkISize& logical_size) {
+  // TODO(38466): Refactor GPU surface APIs take into account the fact that an
+  // external view embedder may want to render to the root surface.
+  if (!render_to_surface_) {
+    return std::make_unique<SurfaceFrame>(
+        nullptr, true, [](const SurfaceFrame& surface_frame, SkCanvas* canvas) {
+          return true;
+        });
+  }
+
   if (!IsValid()) {
     return nullptr;
   }
@@ -55,12 +69,22 @@ std::unique_ptr<SurfaceFrame> GPUSurfaceSoftware::AcquireFrame(
     return self->delegate_->PresentBackingStore(surface_frame.SkiaSurface());
   };
 
-  return std::make_unique<SurfaceFrame>(backing_store, on_submit);
+  return std::make_unique<SurfaceFrame>(backing_store, true, on_submit);
 }
 
-GrContext* GPUSurfaceSoftware::GetContext() {
+// |Surface|
+SkMatrix GPUSurfaceSoftware::GetRootTransformation() const {
+  // This backend does not currently support root surface transformations. Just
+  // return identity.
+  SkMatrix matrix;
+  matrix.reset();
+  return matrix;
+}
+
+// |Surface|
+GrDirectContext* GPUSurfaceSoftware::GetContext() {
   // There is no GrContext associated with a software surface.
   return nullptr;
 }
 
-}  // namespace shell
+}  // namespace flutter

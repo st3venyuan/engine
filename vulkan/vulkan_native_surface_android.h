@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,7 +6,7 @@
 #define FLUTTER_VULKAN_VULKAN_NATIVE_SURFACE_ANDROID_H_
 
 #include "flutter/fml/macros.h"
-#include "flutter/vulkan/vulkan_native_surface.h"
+#include "vulkan_native_surface.h"
 
 struct ANativeWindow;
 typedef struct ANativeWindow ANativeWindow;

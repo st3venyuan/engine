@@ -1,93 +1,74 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef FLUTTER_FLOW_SCENE_UPDATE_CONTEXT_H_
 #define FLUTTER_FLOW_SCENE_UPDATE_CONTEXT_H_
 
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+
+#include <cfloat>
 #include <memory>
 #include <set>
 #include <vector>
 
-#include "flutter/flow/compositor_context.h"
-#include "flutter/fml/build_config.h"
-#include "flutter/fml/compiler_specific.h"
+#include "flutter/flow/embedded_views.h"
 #include "flutter/fml/logging.h"
 #include "flutter/fml/macros.h"
-#include "lib/ui/scenic/cpp/resources.h"
 #include "third_party/skia/include/core/SkRect.h"
 #include "third_party/skia/include/core/SkSurface.h"
 
-namespace flow {
+namespace flutter {
 
 class Layer;
-class ExportNodeHolder;
-class ExportNode;
 
-class SceneUpdateContext {
+// Scenic currently lacks an API to enable rendering of alpha channel; this only
+// happens if there is a OpacityNode higher in the tree with opacity != 1. For
+// now, clamp to a infinitesimally smaller value than 1, which does not cause
+// visual problems in practice.
+constexpr float kOneMinusEpsilon = 1 - FLT_EPSILON;
+
+// How much layers are separated in Scenic z elevation.
+constexpr float kScenicZElevationBetweenLayers = 10.f;
+
+class SessionWrapper {
  public:
-  class SurfaceProducerSurface {
-   public:
-    virtual ~SurfaceProducerSurface() = default;
+  virtual ~SessionWrapper() {}
 
-    virtual size_t AdvanceAndGetAge() = 0;
+  virtual scenic::Session* get() = 0;
+  virtual void Present() = 0;
+};
 
-    virtual bool FlushSessionAcquireAndReleaseEvents() = 0;
-
-    virtual bool IsValid() const = 0;
-
-    virtual SkISize GetSize() const = 0;
-
-    virtual void SignalWritesFinished(
-        std::function<void(void)> on_writes_committed) = 0;
-
-    virtual scenic::Image* GetImage() = 0;
-
-    virtual sk_sp<SkSurface> GetSkiaSurface() const = 0;
-  };
-
-  class SurfaceProducer {
-   public:
-    virtual ~SurfaceProducer() = default;
-
-    virtual std::unique_ptr<SurfaceProducerSurface> ProduceSurface(
-        const SkISize& size) = 0;
-
-    virtual void SubmitSurface(
-        std::unique_ptr<SurfaceProducerSurface> surface) = 0;
-  };
-
+class SceneUpdateContext : public flutter::ExternalViewEmbedder {
+ public:
   class Entity {
    public:
-    Entity(SceneUpdateContext& context);
-    ~Entity();
+    Entity(std::shared_ptr<SceneUpdateContext> context);
+    virtual ~Entity();
 
-    SceneUpdateContext& context() { return context_; }
+    std::shared_ptr<SceneUpdateContext> context() { return context_; }
     scenic::EntityNode& entity_node() { return entity_node_; }
+    virtual scenic::ContainerNode& embedder_node() { return entity_node_; }
 
    private:
-    SceneUpdateContext& context_;
+    std::shared_ptr<SceneUpdateContext> context_;
     Entity* const previous_entity_;
 
     scenic::EntityNode entity_node_;
   };
 
-  class Clip : public Entity {
-   public:
-    Clip(SceneUpdateContext& context,
-         scenic::Shape& shape,
-         const SkRect& shape_bounds);
-    ~Clip();
-  };
-
   class Transform : public Entity {
    public:
-    Transform(SceneUpdateContext& context, const SkMatrix& transform);
-    Transform(SceneUpdateContext& context,
+    Transform(std::shared_ptr<SceneUpdateContext> context,
+              const SkMatrix& transform);
+    Transform(std::shared_ptr<SceneUpdateContext> context,
               float scale_x,
               float scale_y,
               float scale_z);
-    ~Transform();
+    virtual ~Transform();
 
    private:
     float const previous_scale_x_;
@@ -96,103 +77,132 @@ class SceneUpdateContext {
 
   class Frame : public Entity {
    public:
-    Frame(SceneUpdateContext& context,
+    // When layer is not nullptr, the frame is associated with a layer subtree
+    // rooted with that layer. The frame may then create a surface that will be
+    // retained for that layer.
+    Frame(std::shared_ptr<SceneUpdateContext> context,
           const SkRRect& rrect,
           SkColor color,
-          float elevation);
-    ~Frame();
+          SkAlpha opacity,
+          std::string label);
+    virtual ~Frame();
 
-    void AddPaintedLayer(Layer* layer);
+    scenic::ContainerNode& embedder_node() override { return opacity_node_; }
+
+    void AddPaintLayer(Layer* layer);
 
    private:
-    const SkRRect& rrect_;
-    SkColor const color_;
+    const float previous_elevation_;
 
+    const SkRRect rrect_;
+    SkColor const color_;
+    SkAlpha const opacity_;
+
+    scenic::OpacityNodeHACK opacity_node_;
     std::vector<Layer*> paint_layers_;
     SkRect paint_bounds_;
   };
 
-  SceneUpdateContext(scenic::Session* session,
-                     SurfaceProducer* surface_producer);
+  class Clip : public Entity {
+   public:
+    Clip(std::shared_ptr<SceneUpdateContext> context,
+         const SkRect& shape_bounds);
+    ~Clip() = default;
+  };
 
-  ~SceneUpdateContext();
-
-  scenic::Session* session() { return session_; }
-
-  bool has_metrics() const { return !!metrics_; }
-  void set_metrics(fuchsia::ui::gfx::MetricsPtr metrics) {
-    metrics_ = std::move(metrics);
-  }
-  const fuchsia::ui::gfx::MetricsPtr& metrics() const { return metrics_; }
-
-  void AddChildScene(ExportNode* export_node,
-                     SkPoint offset,
-                     bool hit_testable);
-
-  // Adds reference to |export_node| so we can call export_node->Dispose() in
-  // our destructor. Caller is responsible for calling RemoveExportNode() before
-  // |export_node| is destroyed.
-  void AddExportNode(ExportNode* export_node);
-
-  // Removes reference to |export_node|.
-  void RemoveExportNode(ExportNode* export_node);
-
-  // TODO(chinmaygarde): This method must submit the surfaces as soon as paint
-  // tasks are done. However, given that there is no support currently for
-  // Vulkan semaphores, we need to submit all the surfaces after an explicit
-  // CPU wait. Once Vulkan semaphores are available, this method must return
-  // void and the implementation must submit surfaces on its own as soon as the
-  // specific canvas operations are done.
-  FML_WARN_UNUSED_RESULT
-  std::vector<std::unique_ptr<SurfaceProducerSurface>> ExecutePaintTasks(
-      CompositorContext::ScopedFrame& frame);
-
- private:
   struct PaintTask {
-    std::unique_ptr<SurfaceProducerSurface> surface;
-    SkScalar left;
-    SkScalar top;
+    SkRect paint_bounds;
     SkScalar scale_x;
     SkScalar scale_y;
     SkColor background_color;
+    scenic::Material material;
     std::vector<Layer*> layers;
   };
 
+  SceneUpdateContext(std::string debug_label,
+                     fuchsia::ui::views::ViewToken view_token,
+                     scenic::ViewRefPair view_ref_pair,
+                     SessionWrapper& session,
+                     bool intercept_all_input = false);
+  ~SceneUpdateContext() = default;
+
+  // The cumulative alpha value based on all the parent OpacityLayers.
+  void set_alphaf(float alpha) { alpha_ = alpha; }
+  float alphaf() { return alpha_; }
+
+  // Returns all `PaintTask`s generated for the current frame.
+  std::vector<PaintTask> GetPaintTasks();
+
+  // Enable/disable wireframe rendering around the root view bounds.
+  void EnableWireframe(bool enable);
+
+  // Reset state for a new frame.
+  void Reset(const SkISize& frame_size, float device_pixel_ratio);
+
+  // |ExternalViewEmbedder|
+  SkCanvas* GetRootCanvas() override { return nullptr; }
+
+  // |ExternalViewEmbedder|
+  void CancelFrame() override {}
+
+  // |ExternalViewEmbedder|
+  void BeginFrame(
+      SkISize frame_size,
+      GrDirectContext* context,
+      double device_pixel_ratio,
+      fml::RefPtr<fml::RasterThreadMerger> raster_thread_merger) override {}
+
+  // |ExternalViewEmbedder|
+  void PrerollCompositeEmbeddedView(
+      int view_id,
+      std::unique_ptr<EmbeddedViewParams> params) override {}
+
+  // |ExternalViewEmbedder|
+  std::vector<SkCanvas*> GetCurrentCanvases() override {
+    return std::vector<SkCanvas*>();
+  }
+
+  // |ExternalViewEmbedder|
+  virtual SkCanvas* CompositeEmbeddedView(int view_id) override {
+    return nullptr;
+  }
+
+  void CreateView(int64_t view_id, bool hit_testable, bool focusable);
+  void UpdateView(int64_t view_id, bool hit_testable, bool focusable);
+  void DestroyView(int64_t view_id);
+  void UpdateView(int64_t view_id,
+                  const SkPoint& offset,
+                  const SkSize& size,
+                  std::optional<bool> override_hit_testable = std::nullopt);
+
+ private:
   void CreateFrame(scenic::EntityNode& entity_node,
                    const SkRRect& rrect,
                    SkColor color,
+                   SkAlpha opacity,
                    const SkRect& paint_bounds,
                    std::vector<Layer*> paint_layers);
-  void SetShapeTextureOrColor(scenic::ShapeNode& shape_node,
-                              SkColor color,
-                              SkScalar scale_x,
-                              SkScalar scale_y,
-                              const SkRect& paint_bounds,
-                              std::vector<Layer*> paint_layers);
-  void SetShapeColor(scenic::ShapeNode& shape_node, SkColor color);
-  scenic::Image* GenerateImageIfNeeded(SkColor color,
-                                       SkScalar scale_x,
-                                       SkScalar scale_y,
-                                       const SkRect& paint_bounds,
-                                       std::vector<Layer*> paint_layers);
+
+  SessionWrapper& session_;
+
+  scenic::View root_view_;
+  scenic::EntityNode metrics_node_;
+  scenic::EntityNode layer_tree_node_;
+  std::optional<scenic::ShapeNode> input_interceptor_node_;
+
+  std::vector<PaintTask> paint_tasks_;
 
   Entity* top_entity_ = nullptr;
   float top_scale_x_ = 1.f;
   float top_scale_y_ = 1.f;
+  float top_elevation_ = 0.f;
 
-  scenic::Session* const session_;
-  SurfaceProducer* const surface_producer_;
-
-  fuchsia::ui::gfx::MetricsPtr metrics_;
-
-  std::vector<PaintTask> paint_tasks_;
-
-  // Save ExportNodes so we can dispose them in our destructor.
-  std::set<ExportNode*> export_nodes_;
+  float next_elevation_ = 0.f;
+  float alpha_ = 1.f;
 
   FML_DISALLOW_COPY_AND_ASSIGN(SceneUpdateContext);
 };
 
-}  // namespace flow
+}  // namespace flutter
 
 #endif  // FLUTTER_FLOW_SCENE_UPDATE_CONTEXT_H_
